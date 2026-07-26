@@ -37,7 +37,7 @@ python mesh_generator.py
 > This will create/overwrite the `.npz` files inside the `gmsh_meshes/` folder.
 
 ### 2. Experiment I - Geometric Precision and Dynamic Solver
-This experiment numerically validates the spatial precision of the solver (different meshing algorithms) and simulates the stationary, harmonic, and transient regimes of a conductive sphere and a high-voltage coil.
+This experiment numerically validates the spatial precision of the solver (different meshing algorithms) and simulates the stationary, harmonic, and transient regimes of a conductive sphere and a Tesla coil.
 ```bash
 python exp_1.py
 ```
