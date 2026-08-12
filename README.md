@@ -1,4 +1,4 @@
-# Maxwell Project - 2D FEM Solver for Electromagnetism
+# Maxwell Solver FEM 2D: Solver, meshes, and reproduction material for Experiments I--III (CLAGTEE 2026)
 
 This repository contains the source code for the electromagnetic solver based on the two-dimensional Finite Element Method (FEM), developed from scratch in Python by PhD student Giovanni Cocca-Guardia from Pontificia Universidad Católica de Valparaíso, Chile.
 
