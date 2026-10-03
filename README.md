@@ -4,7 +4,7 @@ This repository contains the source code for the electromagnetic solver based on
 
 ## Prerequisites
 
-To run the experiments, you need to have Python 3.7 or higher installed on your system. It is recommended to use a virtual environment (`venv` or `conda`).
+To run the experiments, you need to have Python 3.10 or higher installed on your system. It is recommended to use a virtual environment (`venv` or `conda`).
 
 ### Create Virtual Environment with Conda (Recommended)
 To easily create and activate a conda environment named `electro`, run in your terminal:
@@ -51,12 +51,28 @@ python exp_2.py
 > The results will automatically be saved in the `results/` folder.
 
 ### 4. Experiment III - Experimental Calibration with LED Diodes
-This script calibrates the spatial decay of the electric field using a hybrid analysis with empirical data from LED diodes at various distances.
+This script solves the Cartesian 2D coil prior and remaps its contour amplitudes with a single power law fitted to five manually observed LED activation distances and color-assigned voltages. These voltages are calibration-derived surrogates, not independent local-potential or field measurements.
 ```bash
 python exp_3.py
 ```
-> Here you will observe plots of the calibrated model spatially interpolated to equivalent dimensions in centimeters. Results will also go to `results/`.
+> Results include the remapped grid, Figure 4(a) construction, Table III quantities, and a parameter/provenance record. Distances outside 5–17 cm are extrapolations. The five LED pairs are white (5 cm, 3.3 V), blue (6 cm, 3.1 V), green (6.5 cm, 2.5 V), yellow (12 cm, 2.1 V), and red (17 cm, 2.0 V); LED legs were 2 cm apart.
 
 ## Additional Notes
 - The routines for the main mathematical solver are located in `solver_fem_2d.py`.
 - It is not necessary to modify the code to observe the results! Everything runs _out of the box_.
+
+## CLAGTEE 2026 release
+
+The release tag `clagtee-2026-v1.0` identifies the solver, meshes and Experiments I–III associated with the revised manuscript. Experiment III retains the updated global five-LED fit; it has not been reverted to historical interpolation. The solver uses Cartesian integration, not an implemented axisymmetric 2πr weighting. The assumed 45 kV amplitude is an approximate breakdown-based estimate, not a measured terminal voltage.
+
+Run the additional calibration sensitivity analysis with:
+
+```sh
+python calibration_sensitivity.py
+```
+
+This leaves out each LED pair in turn. The exponent ranges from 0.362 to 0.505; the largest change from the full fit over 5–17 cm is 9.56%. These are descriptive sensitivities, not measurement uncertainty intervals. The main experiment always retains all five pairs. Recorded results are in [docs/calibration_summary.json](docs/calibration_summary.json) and [docs/calibration_leave_one_LED_out.csv](docs/calibration_leave_one_LED_out.csv).
+
+[The adapter-training procedure](docs/ADAPTER_TRAINING.md) documents the paper's physical ensemble and sequential visual residual. This release contains **no AI implementation, model weights, video dataset, annotations, or feature caches**. Consequently it reproduces the public FEM/calibration experiments, not the complete private machine-learning experiment. Downloading the pretrained backbones alone does not reproduce the trained adapters.
+
+[Distance conventions](docs/DISTANCES_AND_CALIBRATION.md) distinguish center distance, surface distance, FEM remapping and image-profile visualization.
