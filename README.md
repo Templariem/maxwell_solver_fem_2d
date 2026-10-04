@@ -2,6 +2,18 @@
 
 This repository contains the source code for the electromagnetic solver based on the two-dimensional Finite Element Method (FEM), developed from scratch in Python by PhD student Giovanni Cocca-Guardia from Pontificia Universidad Católica de Valparaíso, Chile.
 
+## Licenses
+
+The authors' code and software documentation use [MIT](LICENSE). The supplied
+meshes and calibration data use [CC BY 4.0](LICENSE-DATA), with attribution to
+**Giovanni Cocca-Guardia**. [LICENSING.md](LICENSING.md) defines the covered files,
+the grants for the original v1.0 release, and exclusions for the article, its
+figures and third-party materials. Dependencies retain their own licenses; see
+[third-party notices](THIRD_PARTY_NOTICES.md).
+
+[Release clagtee-2026-v1.0.1](https://github.com/Templariem/maxwell_solver_fem_2d/releases/tag/clagtee-2026-v1.0.1)
+adds licensing and documentation to the unchanged v1.0 experiments and data.
+
 ## Prerequisites
 
 To run the experiments, you need to have Python 3.10 or higher installed on your system. It is recommended to use a virtual environment (`venv` or `conda`).
@@ -73,6 +85,6 @@ python calibration_sensitivity.py
 
 This leaves out each LED pair in turn. The exponent ranges from 0.362 to 0.505; the largest change from the full fit over 5–17 cm is 9.56%. These are descriptive sensitivities, not measurement uncertainty intervals. The main experiment always retains all five pairs. Recorded results are in [docs/calibration_summary.json](docs/calibration_summary.json) and [docs/calibration_leave_one_LED_out.csv](docs/calibration_leave_one_LED_out.csv).
 
-[The adapter-training procedure](docs/ADAPTER_TRAINING.md) documents the paper's physical ensemble and sequential visual residual. This release contains **no AI implementation, model weights, video dataset, annotations, or feature caches**. Consequently it reproduces the public FEM/calibration experiments, not the complete private machine-learning experiment. Downloading the pretrained backbones alone does not reproduce the trained adapters.
+[The adapter-training procedure](docs/ADAPTER_TRAINING.md) documents the paper's physical ensemble and sequential visual residual. This FEM release contains **no AI implementation, model weights, video dataset, annotations, or feature caches**. The complete FEM/AI reproduction is now available in the separate [public paper repository](https://github.com/Templariem/physicsai-clagtee2026-reproduction). Downloading the pretrained backbones alone does not reproduce the trained adapters.
 
 [Distance conventions](docs/DISTANCES_AND_CALIBRATION.md) distinguish center distance, surface distance, FEM remapping and image-profile visualization.
