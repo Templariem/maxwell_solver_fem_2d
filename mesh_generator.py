@@ -14,13 +14,13 @@ def gmsh_to_npz(mesh_name):
     """Extract mesh from gmsh. Uses physical groups for material assignment if defined."""
     node_tags, node_coords, _ = gmsh.model.mesh.getNodes()
     nodes = node_coords.reshape(-1, 3)[:, :2]
-    
+
     node_idx_map = {tag: idx for idx, tag in enumerate(node_tags)}
     pgs = gmsh.model.getPhysicalGroups(2)
-    
+
     elements = []
     materials_list = []
-    
+
     if pgs:
         for dim, pg_tag in pgs:
             entity_tags = gmsh.model.getEntitiesForPhysicalGroup(dim, pg_tag)
@@ -40,10 +40,10 @@ def gmsh_to_npz(mesh_name):
                 for el in n_tags_reshaped:
                     elements.append([node_idx_map[node_id] for node_id in el])
                     materials_list.append(1)
-    
+
     elements = np.array(elements)
     materials = np.array(materials_list, dtype=int)
-    
+
     out_path = os.path.join(meshs_dir, f"{mesh_name}.npz")
     np.savez(out_path, nodes=nodes, elements=elements, materials=materials)
     print(f"Mesh {mesh_name} saved at {out_path} ({len(nodes)} nodes, {len(elements)} elements)")
@@ -56,7 +56,7 @@ def generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estrategia):
     gmsh.initialize()
     gmsh.option.setNumber("General.Terminal", 0)
     gmsh.model.add("mesh")
-    
+
     tol = 1e-4
 
     p1 = gmsh.model.geo.addPoint(0, H/2 - R, 0)
@@ -67,7 +67,7 @@ def generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estrategia):
     p6 = gmsh.model.geo.addPoint(0, H/2 + R, 0)
     p_arc = gmsh.model.geo.addPoint(R, H/2, 0)
     p0 = gmsh.model.geo.addPoint(0, H/2, 0)
-    
+
     l1 = gmsh.model.geo.addLine(p1, p2)
     l2 = gmsh.model.geo.addLine(p2, p3)
     l3 = gmsh.model.geo.addLine(p3, p4)
@@ -75,28 +75,28 @@ def generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estrategia):
     l5 = gmsh.model.geo.addLine(p5, p6)
     c6a = gmsh.model.geo.addCircleArc(p6, p0, p_arc)
     c6b = gmsh.model.geo.addCircleArc(p_arc, p0, p1)
-    
+
     cl = gmsh.model.geo.addCurveLoop([l1, l2, l3, l4, l5, c6a, c6b])
     s = gmsh.model.geo.addPlaneSurface([cl])
-    
-    gmsh.option.setNumber("Mesh.Algorithm", 8) 
-    
+
+    gmsh.option.setNumber("Mesh.Algorithm", 8)
+
     if estrategia == "polar":
         gmsh.option.setNumber("Mesh.RecombinationAlgorithm", 3)
         gmsh.option.setNumber("Mesh.RecombineAll", 1)
         gmsh.option.setNumber("Mesh.CharacteristicLengthMin", min(L,H)/nx)
         gmsh.option.setNumber("Mesh.CharacteristicLengthMax", min(L,H)/nx)
-        
+
         for l in [l1, l5]: gmsh.model.geo.mesh.setTransfiniteCurve(l, (nx//2) + 1)
         for l in [c6a, c6b]: gmsh.model.geo.mesh.setTransfiniteCurve(l, nx + 1)
         for l in [l2, l4]: gmsh.model.geo.mesh.setTransfiniteCurve(l, int(nx*1.5) + 1)
         gmsh.model.geo.mesh.setTransfiniteCurve(l3, nx + 1)
-        
+
     elif estrategia == "multibloque":
         gmsh.option.setNumber("Mesh.CharacteristicLengthMin", min(L,H)/(nx*0.6))
         gmsh.option.setNumber("Mesh.CharacteristicLengthMax", min(L,H)/(nx*0.6))
         gmsh.option.setNumber("Mesh.SubdivisionAlgorithm", 1)
-        
+
     elif estrategia == "hibrida":
         gmsh.option.setNumber("Mesh.CharacteristicLengthMin", min(L,H)/(nx*1.5))
         gmsh.option.setNumber("Mesh.CharacteristicLengthMax", min(L,H)/(nx*0.3))
@@ -104,14 +104,14 @@ def generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estrategia):
 
     gmsh.model.geo.synchronize()
     gmsh.model.mesh.generate(2)
-    
+
     nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes()
     nodes_raw = np.array(nodeCoords).reshape(-1, 3)[:, :2]
     tag2idx = {tag: i for i, tag in enumerate(nodeTags)}
-    
+
     elemTypes, elemTags, elemNodeTags = gmsh.model.mesh.getElements(dim=2)
     elements_raw = []
-    
+
     for eType, eTags, eNodeTags in zip(elemTypes, elemTags, elemNodeTags):
         if eType == 3:
             n_elems = len(eTags)
@@ -123,26 +123,26 @@ def generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estrategia):
                     elements_raw.append([tag2idx[el_nodes[0]], tag2idx[el_nodes[3]], tag2idx[el_nodes[2]], tag2idx[el_nodes[1]]])
                 else:
                     elements_raw.append([tag2idx[t] for t in el_nodes])
-            
+
     active_nodes = set()
     for el in elements_raw:
         active_nodes.update(el)
-        
+
     active_nodes_list = sorted(list(active_nodes))
     node_map = {old_idx: new_idx for new_idx, old_idx in enumerate(active_nodes_list)}
-    
+
     nodes = nodes_raw[active_nodes_list]
     elements = []
     for el in elements_raw:
         elements.append([node_map[n] for n in el])
     elements = np.array(elements)
-    
+
     materials = np.ones(len(elements), dtype=int)
-    
+
     bobina, esfera, izq_sup, inferior, superior, derecho = [], [], [], [], [], []
     for i, (x, y) in enumerate(nodes):
         r = np.sqrt(x**2 + (y - H/2)**2)
-        
+
         if abs(r - R) < tol and x >= -tol:
             esfera.append(i)
         elif abs(x) < tol:
@@ -150,7 +150,7 @@ def generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estrategia):
                 bobina.append(i)
             elif y >= H/2 + R - tol:
                 izq_sup.append(i)
-                
+
         if abs(y - H) < tol: superior.append(i)
         if abs(x - L) < tol: derecho.append(i)
         if abs(y) < tol: inferior.append(i)
@@ -163,7 +163,7 @@ def generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estrategia):
         'derecho': derecho,
         'inferior': inferior
     }
-    
+
     gmsh.finalize()
     return nodes, elements, materials, boundaries
 
@@ -278,20 +278,20 @@ def generar_mesh_calibracion():
     gmsh.initialize()
     gmsh.option.setNumber("General.Terminal", 0)
     gmsh.model.add("mapa_calibrado")
-    
+
     s_air = gmsh.model.occ.addRectangle(0, 0, 0, L_domain, H_domain)
     s_coil = gmsh.model.occ.addRectangle(0, 0, 0, r_coil, h_coil)
     s_sphere = gmsh.model.occ.addDisk(0, y_sphere, 0, r_sphere, r_sphere)
-    
+
     gmsh.model.occ.fragment([(2, s_air)], [(2, s_coil), (2, s_sphere)])
     gmsh.model.occ.synchronize()
-    
+
     surfaces = gmsh.model.getEntities(2)
     to_rm = [(d,t) for d,t in surfaces if gmsh.model.occ.getCenterOfMass(d,t)[0] < -1e-6]
     if to_rm:
         gmsh.model.occ.remove(to_rm, recursive=True)
         gmsh.model.occ.synchronize()
-    
+
     surfaces = gmsh.model.getEntities(2)
     mat_coil, mat_sphere, mat_air = [], [], []
     for dim, tag in surfaces:
@@ -303,18 +303,18 @@ def generar_mesh_calibracion():
             mat_coil.append(tag)
         else:
             mat_air.append(tag)
-    
+
     gmsh.model.addPhysicalGroup(2, mat_air, 1)
     if mat_coil: gmsh.model.addPhysicalGroup(2, mat_coil, 2)
     if mat_sphere: gmsh.model.addPhysicalGroup(2, mat_sphere, 3)
-    
+
     gmsh.option.setNumber("Mesh.Algorithm", 8)
     gmsh.option.setNumber("Mesh.RecombinationAlgorithm", 3)
     gmsh.option.setNumber("Mesh.RecombineAll", 1)
     gmsh.option.setNumber("Mesh.SubdivisionAlgorithm", 1)
     gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.0005)
     gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 1.0)
-    
+
     phys_surfs = mat_sphere + mat_coil
     gmsh.model.mesh.field.add("Distance", 1)
     gmsh.model.mesh.field.setNumbers(1, "SurfacesList", phys_surfs)
@@ -326,11 +326,11 @@ def generar_mesh_calibracion():
     gmsh.model.mesh.field.setNumber(2, "DistMax", 3.0)
     gmsh.model.mesh.field.setAsBackgroundMesh(2)
     gmsh.model.mesh.generate(2)
-    
+
     nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes()
     nodes_raw = np.array(nodeCoords).reshape(-1, 3)[:, :2]
     tag2idx = {tag: i for i, tag in enumerate(nodeTags)}
-    
+
     elements_raw, materials_list = [], []
     for dim, tag in surfaces:
         pgs = gmsh.model.getPhysicalGroupsForEntity(dim, tag)
@@ -348,13 +348,13 @@ def generar_mesh_calibracion():
                     else:
                         elements_raw.append([tag2idx[t] for t in en])
                     materials_list.append(mat_id)
-    
+
     active = sorted(set(n for el in elements_raw for n in el))
     nmap = {old: new for new, old in enumerate(active)}
     nodes = nodes_raw[active]
     elements = np.array([[nmap[n] for n in el] for el in elements_raw])
     materials = np.array(materials_list)
-    
+
     out_path = os.path.join(meshs_dir, "exp_3_mesh_calibration.npz")
     np.savez(out_path, nodes=nodes, elements=elements, materials=materials)
     print(f"Mesh exp_3_mesh_calibration saved at {out_path} ({len(nodes)} nodes, {len(elements)} elements)")
@@ -384,7 +384,7 @@ if __name__ == "__main__":
     print("=========================================================")
     print("CENTRALIZED MESH GENERATOR (GMSH)")
     print("=========================================================")
-    
+
     # 1. Generar Exp 1
     L, H, R = 1.0, 1.0, 0.2
     nx, ny = 20, 20
@@ -397,9 +397,9 @@ if __name__ == "__main__":
         print(f"Generating Exp 1 mesh ({estr}) with Gmsh...")
         n, e, m, b = generar_mesh_placa_agujero_q4(L, H, R, nx, ny, estr)
         filename = os.path.join(meshs_dir, f"{name}.npz")
-        np.savez(filename, 
-                 nodes=n, 
-                 elements=e, 
+        np.savez(filename,
+                 nodes=n,
+                 elements=e,
                  materials=m,
                  bobina=b['bobina'],
                  esfera=b['esfera'],
@@ -408,22 +408,22 @@ if __name__ == "__main__":
                  derecho=b['derecho'],
                  inferior=b['inferior'])
         print(f"  Saved at {filename}. Nodes: {len(n)}, Elements: {len(e)}")
-        
+
         # Graficar y guardar imagen de la mesh
         img_filename = os.path.join(images_dir, f"{name}.png")
         tit_label = name.replace("exp_1_mesh_", "").capitalize()
         graficar_mesh_exp1(n, e, img_filename, None)
-        
+
     # 2. Generar Exp 2
     print("\nGenerating Exp 2 meshes...")
     generar_mesh_dipole()
     generar_mesh_magnet()
     generar_mesh_cables()
     generar_mesh_faraday()
-    
+
     # 3. Generar Exp 3
     print("\nGenerating Exp 3 mesh...")
     generar_mesh_calibracion()
-    
+
     print("\nAll meshes successfully generated in gmsh_meshes/!")
     print("=========================================================")

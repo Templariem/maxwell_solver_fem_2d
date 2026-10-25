@@ -1,90 +1,26 @@
-# Maxwell Solver FEM 2D: Solver, meshes, and reproduction material for Experiments I--III (CLAGTEE 2026)
+# Explicit 2D FEM solver — CLAGTEE 2026
 
-This repository contains the source code for the electromagnetic solver based on the two-dimensional Finite Element Method (FEM), developed from scratch in Python by PhD student Giovanni Cocca-Guardia from Pontificia Universidad Católica de Valparaíso, Chile.
+Python implementation accompanying **A Physics-AI Framework for Video-Assisted Electric Potential Mapping Using 2D FEM: A Tesla Coil Case Study**.
 
-## Licenses
+Authors: Giovanni Cocca-Guardia, Gabriel Hermosilla, Hernán Mella, Gabriel Olmos, Manuel Silva, Lisa Soto, Sebastian Quiñones. Pontificia Universidad Católica de Valparaíso, Chile.
 
-The authors' code and software documentation use [MIT](LICENSE). The supplied
-meshes and calibration data use [CC BY 4.0](LICENSE-DATA), with attribution to
-**Giovanni Cocca-Guardia**. [LICENSING.md](LICENSING.md) defines the covered files,
-the grants for the original v1.0 release, and exclusions for the article, its
-figures and third-party materials. Dependencies retain their own licenses; see
-[third-party notices](THIRD_PARTY_NOTICES.md).
-
-[Release clagtee-2026-v1.0.1](https://github.com/Templariem/maxwell_solver_fem_2d/releases/tag/clagtee-2026-v1.0.1)
-adds licensing and documentation to the unchanged v1.0 experiments and data.
-
-## Prerequisites
-
-To run the experiments, you need to have Python 3.10 or higher installed on your system. It is recommended to use a virtual environment (`venv` or `conda`).
-
-### Create Virtual Environment with Conda (Recommended)
-To easily create and activate a conda environment named `electro`, run in your terminal:
-```bash
-conda create -n electro python=3.10
-conda activate electro
-```
-
-### Project Setup
-1. **Clone or download** this repository to your local computer.
-2. Open a terminal and navigate to the directory:
-   ```bash
-   cd path/to/maxwell_solver_fem_2d
-   ```
-3. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   *(This will install numpy, scipy, matplotlib, pandas, openpyxl, and gmsh).*
-
-## Execution Order
-
-The code is prepared to run sequentially without needing to modify internal paths. Make sure to always execute the scripts from the `maxwell_solver_fem_2d` folder.
-
-### 1. Mesh Generation (Optional but Recommended)
-If you want to regenerate the structural meshes from scratch using the Gmsh API:
-```bash
-python mesh_generator.py
-```
-> This will create/overwrite the `.npz` files inside the `gmsh_meshes/` folder.
-
-### 2. Experiment I - Geometric Precision and Dynamic Solver
-This experiment numerically validates the spatial precision of the solver (different meshing algorithms) and simulates the stationary, harmonic, and transient regimes of a conductive sphere and a Tesla coil.
-```bash
-python exp_1.py
-```
-> The results, metrics, and animations from this test will be saved in the `results/` subfolder.
-
-### 3. Experiment II - Faraday's Law and Magnetic Field
-This experiment demonstrates the simulation of electromagnetic induction over a multiphysics domain (coil, capacitive dipoles, eddy current induction).
-```bash
-python exp_2.py
-```
-> The results will automatically be saved in the `results/` folder.
-
-### 4. Experiment III - Experimental Calibration with LED Diodes
-This script solves the Cartesian 2D coil prior and remaps its contour amplitudes with a single power law fitted to five manually observed LED activation distances and color-assigned voltages. These voltages are calibration-derived surrogates, not independent local-potential or field measurements.
-```bash
-python exp_3.py
-```
-> Results include the remapped grid, Figure 4(a) construction, Table III quantities, and a parameter/provenance record. Distances outside 5–17 cm are extrapolations. The five LED pairs are white (5 cm, 3.3 V), blue (6 cm, 3.1 V), green (6.5 cm, 2.5 V), yellow (12 cm, 2.1 V), and red (17 cm, 2.0 V); LED legs were 2 cm apart.
-
-## Additional Notes
-- The routines for the main mathematical solver are located in `solver_fem_2d.py`.
-- It is not necessary to modify the code to observe the results! Everything runs _out of the box_.
-
-## CLAGTEE 2026 release
-
-The release tag `clagtee-2026-v1.0` identifies the solver, meshes and Experiments I–III associated with the revised manuscript. Experiment III retains the updated global five-LED fit; it has not been reverted to historical interpolation. The solver uses Cartesian integration, not an implemented axisymmetric 2πr weighting. The assumed 45 kV amplitude is an approximate breakdown-based estimate, not a measured terminal voltage.
-
-Run the additional calibration sensitivity analysis with:
+**P1 triangles and Q4 quadrilaterals are both implemented and selectable.** The solver explicitly forms gradients, element stiffness/mass matrices and sparse assemblies; SciPy solves the systems. Q4 uses 2×2 Gauss integration. Gmsh generates meshes. Connectivity selects P1 (three nodes) or Q4 (four nodes). The reported paper targets/figures use P1.
 
 ```sh
-python calibration_sensitivity.py
+python -m pip install -r requirements.txt
+python run_verification.py --element P1
+python run_verification.py --element Q4
+python run_benchmarks.py
+python ruler/verify.py
+python ruler/solve.py --help
 ```
 
-This leaves out each LED pair in turn. The exponent ranges from 0.362 to 0.505; the largest change from the full fit over 5–17 cm is 9.56%. These are descriptive sensitivities, not measurement uncertainty intervals. The main experiment always retains all five pairs. Recorded results are in [docs/calibration_summary.json](docs/calibration_summary.json) and [docs/calibration_leave_one_LED_out.csv](docs/calibration_leave_one_LED_out.csv).
+`run_verification.py` reproduces electrostatic, magnetostatic, harmonic and transient verification on three meshes, plus the coil prior and five LED samples. Outputs are under `results/P1/` or `results/Q4/`. P1 verification meshes are formed by splitting each supplied quadrilateral along local diagonal 0–2 and assembling new triangle matrices; Q4 retains quadrilateral connectivity. Both use the same nodes, material tags and boundary values.
 
-[The adapter-training procedure](docs/ADAPTER_TRAINING.md) documents the paper's physical ensemble and sequential visual residual. This FEM release contains **no AI implementation, model weights, video dataset, annotations, or feature caches**. The complete FEM/AI reproduction is now available in the separate [public paper repository](https://github.com/Templariem/physicsai-clagtee2026-reproduction). Downloading the pretrained backbones alone does not reproduce the trained adapters.
+`run_benchmarks.py` solves and plots the electric dipole, permanent magnet, parallel wires and Faraday induction with P1. `benchmark_meshes/` supplies the four tagged input meshes. Outputs are under `results/benchmarks/`.
 
-[Distance conventions](docs/DISTANCES_AND_CALIBRATION.md) distinguish center distance, surface distance, FEM remapping and image-profile visualization.
+`ruler/` contains the interchangeable planar coil/conductor electrostatic solver. Its independent tests check affine patches, manufactured harmonic convergence, Q4 interpolation/gradients, charge balance and regression against the P1 teacher implementation. All study ruler targets use the grounded-conductor case. Equal requested mesh size does not imply equal node counts across element families.
+
+The complete reviewed dataset, neural experiments, trained checkpoints and paper figures/tables are in [the reproduction package](https://github.com/Templariem/physicsai-clagtee2026-reproduction/releases/tag/clagtee-2026-full-v2.0). Neither repository includes a camera application. Validation records are in `validation/`; execution was checked on the Linux homelab. No models are trained by these FEM commands.
+
+Code is MIT (`LICENSE`); author-owned meshes and numerical records are CC BY 4.0 (`LICENSE-DATA`), attributed to Giovanni Cocca-Guardia. Third-party dependencies retain their licenses. Gmsh is installed separately. The article and prepared publication compositions are outside these grants.

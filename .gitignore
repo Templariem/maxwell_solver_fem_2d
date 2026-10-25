@@ -1,6 +1,6 @@
 __pycache__/
-*.py[cod]
+*.pyc
+.venv/
 .DS_Store
 results/
-mesh_images/
-.venv/
+ruler/resultados/
